@@ -28,18 +28,24 @@ try {
         Write-Log "Adding remote repository..."
         git remote add origin https://github.com/2302284606/ESP32_FAN1.git
         if ($LASTEXITCODE -ne 0) { throw "Failed to add remote repository" }
+        
+        Write-Log "Fetching remote repository..."
+        git fetch origin
+        if ($LASTEXITCODE -ne 0) { throw "Failed to fetch from remote" }
+        
+        Write-Log "Creating main branch tracking remote..."
+        git checkout -b main origin/main
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Remote main branch not found, creating new main branch..."
+            git checkout -b main
+        }
     }
 
-    # Switch to main branch
-    Write-Log "Checking and switching to main branch..."
-    $current_branch = git branch --show-current
-    if ($current_branch -ne "main") {
-        git checkout main
-        if ($LASTEXITCODE -ne 0) {
-            Write-Log "Main branch doesn't exist, creating new main branch..."
-            git checkout -b main
-            if ($LASTEXITCODE -ne 0) { throw "Failed to create main branch" }
-        }
+    # Pull latest changes
+    Write-Log "Pulling latest changes..."
+    git pull origin main --allow-unrelated-histories
+    if ($LASTEXITCODE -ne 0) {
+        Write-Log "Pull failed, but continuing with push..."
     }
 
     # Add all files to staging area
@@ -52,9 +58,9 @@ try {
     git commit -m $commit_message
     if ($LASTEXITCODE -ne 0) { throw "Failed to commit changes" }
 
-    # Push to remote repository
-    Write-Log "Pushing to GitHub..."
-    git push -u origin main
+    # Force push to remote repository
+    Write-Log "Force pushing to GitHub..."
+    git push -u origin main --force
     if ($LASTEXITCODE -ne 0) { throw "Failed to push to GitHub" }
 
     Write-Log "All operations completed successfully!"
