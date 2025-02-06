@@ -36,8 +36,11 @@ function updateUI(params) {
     if (params.light !== undefined) {
         document.getElementById('light').textContent = params.light + ' lx';
     }
-    if (params.led !== undefined) {
-        document.getElementById('ledSwitch').checked = params.led;
+    if (params.led_brightness !== undefined) {
+        const ledSlider = document.getElementById('ledBrightness');
+        const ledValue = document.getElementById('ledBrightnessValue');
+        ledSlider.value = params.led_brightness;
+        ledValue.textContent = params.led_brightness;
     }
     if (params.fan_switch !== undefined) {
         document.getElementById('fanSwitch').checked = params.fan_switch;
@@ -68,12 +71,6 @@ function updateUI(params) {
         const predictBtn = document.getElementById('predictBtn');
         predictBtn.disabled = params.prediction_status === 'running';
         predictBtn.textContent = params.prediction_status === 'running' ? '预测中...' : '开始预测';
-    }
-    if (params.led_brightness !== undefined) {
-        const ledSlider = document.getElementById('ledBrightness');
-        const ledValue = document.getElementById('ledBrightnessValue');
-        ledSlider.value = params.led_brightness;
-        ledValue.textContent = params.led_brightness;
     }
 }
 
@@ -113,75 +110,19 @@ function handleMQTTMessage(topic, message) {
         console.log('收到MQTT消息:', topic, data);
         
         if (topic === 'liuxing23i/fan/data') {
-            // 更新传感器数据显示
-            if (data.temperature !== undefined) {
-                document.getElementById('temperature').textContent = 
-                    data.temperature.toFixed(1) + '°C';
-            }
-            if (data.humidity !== undefined) {
-                document.getElementById('humidity').textContent = 
-                    data.humidity.toFixed(1) + '%';
-            }
-            if (data.light !== undefined) {
-                document.getElementById('light').textContent = 
-                    data.light + ' lx';
-            }
-            
-            // 更新控制状态
-            if (data.led !== undefined) {
-                document.getElementById('ledSwitch').checked = data.led;
-            }
-            if (data.fan_switch !== undefined) {
-                document.getElementById('fanSwitch').checked = data.fan_switch;
-            }
-            if (data.fan_speed !== undefined) {
-                const speedSlider = document.getElementById('fanSpeed');
-                const speedValue = document.getElementById('fanSpeedValue');
-                speedSlider.value = data.fan_speed;
-                speedValue.textContent = data.fan_speed;
-            }
-            
-            // 更新系统状态
-            if (data.cpu_temp !== undefined) {
-                document.getElementById('cpuTemp').textContent = 
-                    data.cpu_temp.toFixed(1) + '°C';
-            }
-            if (data.cpu_freq !== undefined) {
-                document.getElementById('cpuFreq').textContent = 
-                    data.cpu_freq + 'MHz';
-            }
-            if (data.memory_usage !== undefined) {
-                document.getElementById('memoryUsage').textContent = 
-                    data.memory_usage.toFixed(1) + '%';
-            }
-            if (data.uptime !== undefined) {
-                const hours = Math.floor(data.uptime / 3600);
-                const minutes = Math.floor((data.uptime % 3600) / 60);
-                const seconds = data.uptime % 60;
-                document.getElementById('uptime').textContent = 
-                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }
+            updateUI(data);
         }
-        else if (topic === 'liuxing23i/fan/control') {
-            if (data.type && data.value !== undefined) {
-                const updateData = {
-                    [data.type]: data.value
-                };
-                updateUI(updateData);
-            }
-        }
-        
     } catch (error) {
         console.error('处理MQTT消息失败:', error);
     }
 }
 
 // 更新MQTT状态显示
-function updateMQTTStatus(status, message = '') {
+function updateMQTTStatus(status, message) {
     const statusElement = document.getElementById('mqttStatus');
     statusElement.className = 'mqtt-status';
     
-    switch(status) {
+    switch (status) {
         case 'connected':
             statusElement.classList.add('mqtt-connected');
             statusElement.textContent = '已连接';
@@ -263,11 +204,22 @@ function subscribeToTopics() {
     });
 }
 
-// 绑定UI事件
-document.getElementById('ledSwitch').addEventListener('change', function(e) {
-    sendMQTTControl('led', e.target.checked);
+// LED亮度控制
+const debouncedSendLEDBrightness = debounce((value) => {
+    sendMQTTControl('led_brightness', value);
+}, 300);
+
+document.getElementById('ledBrightness').addEventListener('input', function(e) {
+    const value = parseInt(e.target.value);
+    document.getElementById('ledBrightnessValue').textContent = value;
 });
 
+document.getElementById('ledBrightness').addEventListener('change', function(e) {
+    const value = parseInt(e.target.value);
+    debouncedSendLEDBrightness(value);
+});
+
+// 风扇控制
 document.getElementById('fanSwitch').addEventListener('change', function(e) {
     sendMQTTControl('fan_switch', e.target.checked);
 });
@@ -346,21 +298,6 @@ document.querySelectorAll('.form-check-input, .form-select').forEach(element => 
     element.addEventListener('touchend', function() {
         this.style.opacity = '1';
     });
-});
-
-// LED亮度控制
-const debouncedSendLEDBrightness = debounce((value) => {
-    sendMQTTControl('led_brightness', value);
-}, 300);
-
-document.getElementById('ledBrightness').addEventListener('input', function(e) {
-    const value = parseInt(e.target.value);
-    document.getElementById('ledBrightnessValue').textContent = value;
-});
-
-document.getElementById('ledBrightness').addEventListener('change', function(e) {
-    const value = parseInt(e.target.value);
-    debouncedSendLEDBrightness(value);
 });
 
 // 初始化
