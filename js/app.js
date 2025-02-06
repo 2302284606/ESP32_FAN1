@@ -2,10 +2,11 @@
 const mqttConfig = {
     host: 's1202e81.ala.cn-hangzhou.emqxsl.cn',
     port: 8084,
-    clientId: 'web_control_' + Math.random().toString(16).substring(2, 8),
+    clientId: 'web_' + Math.random().toString(16).substring(2, 8),
     username: 'emqx',
     password: 'linjiajun1',
-    protocol: 'wss'
+    protocol: 'wss',
+    path: '/mqtt'
 };
 
 let mqttClient = null;
@@ -110,7 +111,10 @@ function handleMQTTMessage(topic, message) {
         console.log('收到MQTT消息:', topic, data);
         
         if (topic === 'liuxing23i/fan/data') {
+            console.log('更新UI数据:', data);
             updateUI(data);
+        } else if (topic === 'liuxing23i/fan/control') {
+            console.log('收到控制反馈:', data);
         }
     } catch (error) {
         console.error('处理MQTT消息失败:', error);
@@ -145,6 +149,7 @@ async function connectMQTT() {
         updateMQTTStatus('connecting');
 
         const wsUrl = `${mqttConfig.protocol}://${mqttConfig.host}:${mqttConfig.port}/mqtt`;
+        console.log('MQTT连接URL:', wsUrl);
         
         const options = {
             clientId: mqttConfig.clientId,
@@ -153,10 +158,11 @@ async function connectMQTT() {
             clean: true,
             rejectUnauthorized: false,
             reconnectPeriod: 5000,
+            connectTimeout: 30000
         };
 
         mqttClient = mqtt.connect(wsUrl, options);
-
+        
         mqttClient.on('connect', () => {
             console.log('MQTT连接成功');
             updateMQTTStatus('connected');
@@ -194,7 +200,7 @@ function subscribeToTopics() {
     ];
 
     topics.forEach(topic => {
-        mqttClient.subscribe(topic, (err) => {
+        mqttClient.subscribe(topic, { qos: 1 }, (err) => {
             if (err) {
                 console.error('订阅主题失败:', topic, err);
             } else {
