@@ -69,6 +69,12 @@ function updateUI(params) {
         predictBtn.disabled = params.prediction_status === 'running';
         predictBtn.textContent = params.prediction_status === 'running' ? '预测中...' : '开始预测';
     }
+    if (params.led_brightness !== undefined) {
+        const ledSlider = document.getElementById('ledBrightness');
+        const ledValue = document.getElementById('ledBrightnessValue');
+        ledSlider.value = params.led_brightness;
+        ledValue.textContent = params.led_brightness;
+    }
 }
 
 // 通过MQTT发送控制命令
@@ -107,7 +113,54 @@ function handleMQTTMessage(topic, message) {
         console.log('收到MQTT消息:', topic, data);
         
         if (topic === 'liuxing23i/fan/data') {
-            updateUI(data);
+            // 更新传感器数据显示
+            if (data.temperature !== undefined) {
+                document.getElementById('temperature').textContent = 
+                    data.temperature.toFixed(1) + '°C';
+            }
+            if (data.humidity !== undefined) {
+                document.getElementById('humidity').textContent = 
+                    data.humidity.toFixed(1) + '%';
+            }
+            if (data.light !== undefined) {
+                document.getElementById('light').textContent = 
+                    data.light + ' lx';
+            }
+            
+            // 更新控制状态
+            if (data.led !== undefined) {
+                document.getElementById('ledSwitch').checked = data.led;
+            }
+            if (data.fan_switch !== undefined) {
+                document.getElementById('fanSwitch').checked = data.fan_switch;
+            }
+            if (data.fan_speed !== undefined) {
+                const speedSlider = document.getElementById('fanSpeed');
+                const speedValue = document.getElementById('fanSpeedValue');
+                speedSlider.value = data.fan_speed;
+                speedValue.textContent = data.fan_speed;
+            }
+            
+            // 更新系统状态
+            if (data.cpu_temp !== undefined) {
+                document.getElementById('cpuTemp').textContent = 
+                    data.cpu_temp.toFixed(1) + '°C';
+            }
+            if (data.cpu_freq !== undefined) {
+                document.getElementById('cpuFreq').textContent = 
+                    data.cpu_freq + 'MHz';
+            }
+            if (data.memory_usage !== undefined) {
+                document.getElementById('memoryUsage').textContent = 
+                    data.memory_usage.toFixed(1) + '%';
+            }
+            if (data.uptime !== undefined) {
+                const hours = Math.floor(data.uptime / 3600);
+                const minutes = Math.floor((data.uptime % 3600) / 60);
+                const seconds = data.uptime % 60;
+                document.getElementById('uptime').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
         }
         else if (topic === 'liuxing23i/fan/control') {
             if (data.type && data.value !== undefined) {
@@ -293,6 +346,21 @@ document.querySelectorAll('.form-check-input, .form-select').forEach(element => 
     element.addEventListener('touchend', function() {
         this.style.opacity = '1';
     });
+});
+
+// LED亮度控制
+const debouncedSendLEDBrightness = debounce((value) => {
+    sendMQTTControl('led_brightness', value);
+}, 300);
+
+document.getElementById('ledBrightness').addEventListener('input', function(e) {
+    const value = parseInt(e.target.value);
+    document.getElementById('ledBrightnessValue').textContent = value;
+});
+
+document.getElementById('ledBrightness').addEventListener('change', function(e) {
+    const value = parseInt(e.target.value);
+    debouncedSendLEDBrightness(value);
 });
 
 // 初始化

@@ -1,0 +1,5 @@
+.\upload_to_github.ps1
+
+在Cursor   powershell里面运行 .\upload_to_github.ps1
+
+会把app这个文件夹的代码全部上传到github  的ESP32_FAN1仓库里面
