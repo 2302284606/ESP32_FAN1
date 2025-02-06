@@ -219,88 +219,26 @@ function subscribeToTopics() {
     });
 }
 
+// 移除这些直接的事件监听器绑定
 // LED亮度控制
 const debouncedSendLEDBrightness = debounce((value) => {
     sendMQTTControl('led_brightness', value);
 }, 300);
 
-// 风扇控制
-document.getElementById('fanSwitch').addEventListener('change', function(e) {
-    sendMQTTControl('fan_switch', e.target.checked);
-});
-
+// 风扇控制的防抖函数
 const debouncedSendFanSpeed = debounce((value) => {
     sendMQTTControl('fan_speed', value);
 }, 300);
 
-// 预测模式切换处理
-document.querySelectorAll('input[name="predictMode"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const manualForm = document.getElementById('manualInputForm');
-        manualForm.style.display = this.value === 'manual' ? 'block' : 'none';
-    });
-});
-
-document.getElementById('predictBtn').addEventListener('click', function() {
-    const mode = document.querySelector('input[name="predictMode"]:checked').value;
-    let predictData = {};
-    
-    if (mode === 'manual') {
-        // 获取手动输入的数据
-        const temp = parseFloat(document.getElementById('manualTemp').value);
-        const humidity = parseFloat(document.getElementById('manualHumidity').value);
-        const light = parseFloat(document.getElementById('manualLight').value);
-        const hour = parseInt(document.getElementById('manualHour').value);
-        
-        // 验证输入数据
-        if (isNaN(temp) || isNaN(humidity) || isNaN(light) || isNaN(hour)) {
-            alert('请输入有效的数值');
-            return;
-        }
-        
-        if (temp < 0 || temp > 40 || humidity < 0 || humidity > 100 || 
-            light < 0 || light > 65535 || hour < 0 || hour > 23) {
-            alert('请输入有效范围内的数值');
-            return;
-        }
-        
-        predictData = {
-            type: 'predict',
-            mode: 'manual',
-            data: {
-                temperature: temp,
-                humidity: humidity,
-                light: light,
-                hour: hour
-            }
-        };
-    } else {
-        predictData = {
-            type: 'predict',
-            mode: 'real'
-        };
-    }
-    
-    sendMQTTControl(predictData.type, predictData);
-    updateUI({ prediction_status: 'running' });
-});
-
-// 添加触摸反馈
-document.querySelectorAll('.form-check-input, .form-select').forEach(element => {
-    element.addEventListener('touchstart', function() {
-        this.style.opacity = '0.7';
-    });
-    element.addEventListener('touchend', function() {
-        this.style.opacity = '1';
-    });
-});
-
 // 初始化函数：设置所有事件监听器
 function initializeEventListeners() {
+    console.log('初始化事件监听器...');
+
     // LED亮度控制
     const ledBrightness = document.getElementById('ledBrightness');
     const ledBrightnessValue = document.getElementById('ledBrightnessValue');
     if (ledBrightness && ledBrightnessValue) {
+        console.log('设置LED亮度控制监听器');
         ledBrightness.addEventListener('input', function(e) {
             const value = parseInt(e.target.value);
             ledBrightnessValue.textContent = value;
@@ -315,6 +253,7 @@ function initializeEventListeners() {
     // 风扇控制
     const fanSwitch = document.getElementById('fanSwitch');
     if (fanSwitch) {
+        console.log('设置风扇开关监听器');
         fanSwitch.addEventListener('change', function(e) {
             sendMQTTControl('fan_switch', e.target.checked);
         });
@@ -324,6 +263,7 @@ function initializeEventListeners() {
     const fanSpeed = document.getElementById('fanSpeed');
     const fanSpeedValue = document.getElementById('fanSpeedValue');
     if (fanSpeed && fanSpeedValue) {
+        console.log('设置风扇速度控制监听器');
         fanSpeed.addEventListener('input', function(e) {
             const value = parseInt(e.target.value);
             fanSpeedValue.textContent = value;
@@ -339,6 +279,7 @@ function initializeEventListeners() {
     const predictModeRadios = document.querySelectorAll('input[name="predictMode"]');
     const manualForm = document.getElementById('manualInputForm');
     if (predictModeRadios.length && manualForm) {
+        console.log('设置预测模式控制监听器');
         predictModeRadios.forEach(radio => {
             radio.addEventListener('change', function() {
                 manualForm.style.display = this.value === 'manual' ? 'block' : 'none';
@@ -349,6 +290,7 @@ function initializeEventListeners() {
     // 预测按钮
     const predictBtn = document.getElementById('predictBtn');
     if (predictBtn) {
+        console.log('设置预测按钮监听器');
         predictBtn.addEventListener('click', function() {
             const mode = document.querySelector('input[name="predictMode"]:checked')?.value;
             if (!mode) return;
@@ -395,6 +337,16 @@ function initializeEventListeners() {
             updateUI({ prediction_status: 'running' });
         });
     }
+
+    // 添加触摸反馈
+    document.querySelectorAll('.form-check-input, .form-select').forEach(element => {
+        element.addEventListener('touchstart', function() {
+            this.style.opacity = '0.7';
+        });
+        element.addEventListener('touchend', function() {
+            this.style.opacity = '1';
+        });
+    });
 }
 
 // 修改初始化部分
@@ -408,7 +360,10 @@ function initializePage() {
         return;
     }
     
+    // 初始化事件监听器
     initializeEventListeners();
+    
+    // 连接MQTT
     connectMQTT();
 }
 
