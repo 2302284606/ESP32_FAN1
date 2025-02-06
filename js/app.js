@@ -148,6 +148,12 @@ async function connectMQTT() {
         console.log('开始连接MQTT服务器...');
         updateMQTTStatus('connecting');
 
+        // 确保先断开之前的连接
+        if (mqttClient) {
+            mqttClient.end(true);
+            mqttClient = null;
+        }
+
         const wsUrl = `${mqttConfig.protocol}://${mqttConfig.host}:${mqttConfig.port}/mqtt`;
         console.log('MQTT连接URL:', wsUrl);
         
@@ -158,7 +164,8 @@ async function connectMQTT() {
             clean: true,
             rejectUnauthorized: false,
             reconnectPeriod: 5000,
-            connectTimeout: 30000
+            connectTimeout: 30000,
+            keepalive: 60
         };
 
         mqttClient = mqtt.connect(wsUrl, options);
@@ -167,6 +174,8 @@ async function connectMQTT() {
             console.log('MQTT连接成功');
             updateMQTTStatus('connected');
             subscribeToTopics();
+            // 连接成功后立即请求一次数据
+            sendMQTTControl('request_data', true);
         });
 
         mqttClient.on('error', (error) => {
@@ -388,9 +397,42 @@ function initializeEventListeners() {
     }
 }
 
-// 等待DOM完全加载后再初始化
-document.addEventListener('DOMContentLoaded', () => {
+// 修改初始化部分
+function initializePage() {
     console.log('初始化控制页面...');
-    initializeEventListeners();  // 初始化所有事件监听器
-    connectMQTT();              // 连接MQTT服务器
+    
+    // 确保MQTT客户端库已加载
+    if (typeof mqtt === 'undefined') {
+        console.error('MQTT客户端库未加载！');
+        setTimeout(initializePage, 1000); // 1秒后重试
+        return;
+    }
+    
+    initializeEventListeners();
+    connectMQTT();
+}
+
+// 等待页面加载完成
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePage);
+} else {
+    initializePage();
+}
+
+// 添加页面可见性变化监听
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        // 页面变为可见时，检查MQTT连接
+        if (!mqttClient || !mqttClient.connected) {
+            console.log('页面可见，重新连接MQTT...');
+            connectMQTT();
+        }
+    }
+});
+
+// 添加页面卸载事件监听
+window.addEventListener('beforeunload', () => {
+    if (mqttClient) {
+        mqttClient.end();
+    }
 }); 
