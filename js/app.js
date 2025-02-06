@@ -28,13 +28,13 @@ function updateUI(params) {
     console.log('开始更新UI, 参数:', params);
     
     if (params.temperature !== undefined) {
-        document.getElementById('temperature').textContent = params.temperature.toFixed(1) + '°C';
+        document.getElementById('temperature').textContent = params.temperature.toFixed(1);
     }
     if (params.humidity !== undefined) {
-        document.getElementById('humidity').textContent = params.humidity.toFixed(1) + '%';
+        document.getElementById('humidity').textContent = params.humidity.toFixed(1);
     }
     if (params.light !== undefined) {
-        document.getElementById('light').textContent = params.light + ' lx';
+        document.getElementById('light').textContent = params.light;
     }
     if (params.led_brightness !== undefined) {
         const ledSlider = document.getElementById('ledBrightness');

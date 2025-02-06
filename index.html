@@ -32,6 +32,10 @@
             font-size: 28px;
             font-weight: bold;
             color: #2196F3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
         }
         .status-bar {
             position: fixed;
@@ -69,6 +73,7 @@
         .data-card {
             text-align: center;
             padding: 20px;
+            height: 100%;
         }
         .data-card .card-title {
             color: #666;
@@ -144,6 +149,10 @@
                 font-size: 14px;
             }
         }
+        .unit {
+            font-size: 20px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -176,19 +185,28 @@
                 <div class="col-4">
                     <div class="card data-card">
                         <h5 class="card-title">温度</h5>
-                        <p class="sensor-value" id="temperature" role="status" aria-live="polite">--°C</p>
+                        <div class="sensor-value">
+                            <span id="temperature">--</span>
+                            <span class="unit">°C</span>
+                        </div>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="card data-card">
                         <h5 class="card-title">湿度</h5>
-                        <p class="sensor-value" id="humidity" role="status" aria-live="polite">--%</p>
+                        <div class="sensor-value">
+                            <span id="humidity">--</span>
+                            <span class="unit">%</span>
+                        </div>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="card data-card">
                         <h5 class="card-title">光照</h5>
-                        <p class="sensor-value" id="light" role="status" aria-live="polite">--lx</p>
+                        <div class="sensor-value">
+                            <span id="light">--</span>
+                            <span class="unit">lx</span>
+                        </div>
                     </div>
                 </div>
             </div>
