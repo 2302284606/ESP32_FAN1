@@ -1,11 +1,11 @@
 // MQTT配置
 const mqttConfig = {
     host: 's1202e81.ala.cn-hangzhou.emqxsl.cn',
-    port: 8084,
+    port: 8084,                // WebSocket SSL端口
     clientId: 'web_' + Math.random().toString(16).substring(2, 8),
     username: 'emqx',
     password: 'linjiajun1',
-    protocol: 'wss',
+    protocol: 'wss',          // 使用安全WebSocket
     path: '/mqtt'
 };
 
@@ -110,11 +110,27 @@ function handleMQTTMessage(topic, message) {
         const data = JSON.parse(message.toString());
         console.log('收到MQTT消息:', topic, data);
         
-        if (topic === 'liuxing23i/fan/data') {
-            console.log('更新UI数据:', data);
+        if (topic === 'liuxing23i/fan') {
+            // 处理状态更新
+            console.log('处理状态更新:', data);
             updateUI(data);
-        } else if (topic === 'liuxing23i/fan/control') {
-            console.log('收到控制反馈:', data);
+        } 
+        else if (topic === 'liuxing23i/fan/control') {
+            // 处理控制反馈
+            console.log('处理控制反馈:', data);
+            if (data.type && data.value !== undefined) {
+                const updateData = {
+                    [data.type]: data.value
+                };
+                updateUI(updateData);
+            }
+        }
+        else if (topic === '$sys/Fiw8h1D03X/d1/thing/property/set') {
+            // 处理UI更新消息
+            console.log('处理UI更新:', data);
+            if (data.properties) {
+                updateUI(data.properties);
+            }
         }
     } catch (error) {
         console.error('处理MQTT消息失败:', error);
@@ -146,16 +162,18 @@ function updateMQTTStatus(status, message) {
 async function connectMQTT() {
     try {
         console.log('开始连接MQTT服务器...');
+        console.log('连接配置:', {
+            host: mqttConfig.host,
+            port: mqttConfig.port,
+            protocol: mqttConfig.protocol,
+            path: mqttConfig.path,
+            clientId: mqttConfig.clientId
+        });
+        
         updateMQTTStatus('connecting');
 
-        // 确保先断开之前的连接
-        if (mqttClient) {
-            mqttClient.end(true);
-            mqttClient = null;
-        }
-
         const wsUrl = `${mqttConfig.protocol}://${mqttConfig.host}:${mqttConfig.port}/mqtt`;
-        console.log('MQTT连接URL:', wsUrl);
+        console.log('完整连接URL:', wsUrl);
         
         const options = {
             clientId: mqttConfig.clientId,
@@ -165,25 +183,30 @@ async function connectMQTT() {
             rejectUnauthorized: false,
             reconnectPeriod: 5000,
             connectTimeout: 30000,
-            keepalive: 60
+            keepalive: 60,
+            path: '/mqtt'
         };
 
+        // 确保先断开之前的连接
+        if (mqttClient) {
+            console.log('断开之前的连接...');
+            mqttClient.end(true);
+            mqttClient = null;
+        }
+
+        console.log('创建新的MQTT连接...');
         mqttClient = mqtt.connect(wsUrl, options);
         
         mqttClient.on('connect', () => {
-            console.log('MQTT连接成功');
+            console.log('MQTT连接成功!');
             updateMQTTStatus('connected');
             subscribeToTopics();
-            // 连接成功后立即请求一次数据
-            sendMQTTControl('request_data', true);
         });
 
         mqttClient.on('error', (error) => {
             console.error('MQTT错误:', error);
-            updateMQTTStatus('disconnected', 'MQTT错误');
+            updateMQTTStatus('disconnected', `MQTT错误: ${error.message}`);
         });
-
-        mqttClient.on('message', handleMQTTMessage);
 
         mqttClient.on('close', () => {
             console.log('MQTT连接已断开');
@@ -197,15 +220,16 @@ async function connectMQTT() {
 
     } catch (error) {
         console.error('MQTT连接失败:', error);
-        updateMQTTStatus('disconnected', 'MQTT连接失败');
+        updateMQTTStatus('disconnected', `连接失败: ${error.message}`);
     }
 }
 
 // 订阅主题
 function subscribeToTopics() {
     const topics = [
-        'liuxing23i/fan/data',      // 传感器数据
-        'liuxing23i/fan/control'    // 控制反馈
+        'liuxing23i/fan',                                    // 状态主题
+        'liuxing23i/fan/control',                           // 控制主题
+        '$sys/Fiw8h1D03X/d1/thing/property/set'            // UI更新主题
     ];
 
     topics.forEach(topic => {

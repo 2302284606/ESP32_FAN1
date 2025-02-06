@@ -1,3 +1,7 @@
+# UTF-8 with BOM
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 # Set error action preference
 $ErrorActionPreference = "Stop"
 
@@ -8,14 +12,26 @@ function Write-Log {
 }
 
 try {
-    Write-Log "Starting Git operations..."
+    # Get script directory
+    $scriptPath = $PSScriptRoot
+    Write-Log "Script directory: $scriptPath"
+    
+    # Change to script directory
+    Set-Location $scriptPath
+    Write-Log "Changed to working directory: $scriptPath"
+    
+    # List files to upload
+    Write-Log "Files and directories to upload:"
+    Get-ChildItem -Path $scriptPath -Recurse -Force | ForEach-Object {
+        Write-Log "- $($_.FullName.Substring($scriptPath.Length + 1))"
+    }
 
-    # Set Git global config
-    Write-Log "Configuring Git user info..."
+    # Git configuration
+    Write-Log "Configuring Git..."
     git config --global user.email "LIUXING23I@2025.com"
     git config --global user.name "2302284606"
 
-    # Get current time for commit message
+    # Get timestamp for commit message
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $commit_message = "Auto update at $timestamp"
 
@@ -33,7 +49,7 @@ try {
         git fetch origin
         if ($LASTEXITCODE -ne 0) { throw "Failed to fetch from remote" }
         
-        Write-Log "Creating main branch tracking remote..."
+        Write-Log "Creating main branch..."
         git checkout -b main origin/main
         if ($LASTEXITCODE -ne 0) {
             Write-Log "Remote main branch not found, creating new main branch..."
@@ -45,11 +61,11 @@ try {
     Write-Log "Pulling latest changes..."
     git pull origin main --allow-unrelated-histories
     if ($LASTEXITCODE -ne 0) {
-        Write-Log "Pull failed, but continuing with push..."
+        Write-Log "Pull failed, but continuing..."
     }
 
-    # Add all files to staging area
-    Write-Log "Adding files to staging area..."
+    # Add all files
+    Write-Log "Adding files..."
     git add .
     if ($LASTEXITCODE -ne 0) { throw "Failed to add files" }
 
@@ -58,12 +74,12 @@ try {
     git commit -m $commit_message
     if ($LASTEXITCODE -ne 0) { throw "Failed to commit changes" }
 
-    # Force push to remote repository
-    Write-Log "Force pushing to GitHub..."
+    # Push to GitHub
+    Write-Log "Pushing to GitHub..."
     git push -u origin main --force
     if ($LASTEXITCODE -ne 0) { throw "Failed to push to GitHub" }
 
-    Write-Log "All operations completed successfully!"
+    Write-Log "All operations completed!"
 }
 catch {
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
