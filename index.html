@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>ESP32 智能控制</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            background-color: #f5f5f5;
+            padding-bottom: 20px;
+        }
+        .card {
+            margin: 10px 0;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background: white;
+        }
+        .sensor-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        .main-content {
+            margin-top: 20px;
+            padding: 15px;
+        }
+        .data-card {
+            text-align: center;
+            padding: 20px;
+            height: 100%;
+        }
+        .mqtt-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 15px;
+        }
+        .mqtt-status::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .mqtt-connected {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+        }
+        .mqtt-connected::before {
+            background-color: #4CAF50;
+        }
+        .mqtt-disconnected {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: #F44336;
+        }
+        .mqtt-disconnected::before {
+            background-color: #F44336;
+        }
+        .mqtt-connecting {
+            background-color: rgba(255, 152, 0, 0.1);
+            color: #FF9800;
+        }
+        .mqtt-connecting::before {
+            background-color: #FF9800;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- MQTT状态指示器 -->
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0">ESP32 智能控制</h4>
+            <div class="mqtt-status mqtt-disconnected" id="mqttStatus">未连接</div>
+        </div>
+    </div>
+
+    <!-- 主要内容 -->
+    <div class="main-content">
+        <div class="container">
+            <!-- 传感器数据 -->
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card data-card">
+                        <h5 class="card-title">温度</h5>
+                        <p class="sensor-value" id="temperature">--°C</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card data-card">
+                        <h5 class="card-title">湿度</h5>
+                        <p class="sensor-value" id="humidity">--%</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card data-card">
+                        <h5 class="card-title">光照</h5>
+                        <p class="sensor-value" id="light">--lx</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 控制区域 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">设备控制</h5>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-center align-items-center gap-5">
+                            <div class="form-check form-switch d-flex align-items-center gap-3">
+                                <input class="form-check-input" type="checkbox" id="fanSwitch" aria-label="风扇开关">
+                                <label class="form-check-label" for="fanSwitch">风扇开关</label>
+                            </div>
+                            <div class="border-start mx-2" style="height: 24px;"></div>
+                            <div class="form-check form-switch d-flex align-items-center gap-3">
+                                <input class="form-check-input" type="checkbox" id="ledSwitch">
+                                <label class="form-check-label" for="ledSwitch">LED开关</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">风扇速度 (<span id="fanSpeedValue">0</span>%)</label>
+                            <span class="badge bg-info" id="fanDirection">正转</span>
+                        </div>
+                        <input type="range" class="form-range" id="fanSpeed" min="0" max="100" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 在控制区域卡片中添加预测控制部分 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">智能预测</h5>
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="predictMode" id="predictNone" value="none" checked>
+                            <label class="form-check-label" for="predictNone">
+                                关闭预测
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="predictMode" id="predictRealtime" value="realtime">
+                            <label class="form-check-label" for="predictRealtime">
+                                实时数据预测
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="predictMode" id="predictManual" value="manual">
+                            <label class="form-check-label" for="predictManual">
+                                手动输入预测
+                            </label>
+                        </div>
+                        
+                        <!-- 手动输入表单 -->
+                        <div id="manualInputForm" class="mt-3" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label" for="manualTemp">温度 (°C)</label>
+                                <input type="number" class="form-control" id="manualTemp" min="0" max="40" step="0.1" value="25">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="manualHumidity">湿度 (%)</label>
+                                <input type="number" class="form-control" id="manualHumidity" min="0" max="100" step="0.1" value="60">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="manualLight">光照强度 (lx)</label>
+                                <input type="number" class="form-control" id="manualLight" min="0" max="65535" step="1" value="500">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="manualHour">时间 (小时)</label>
+                                <input type="number" class="form-control" id="manualHour" min="0" max="23" step="1" value="12">
+                            </div>
+                            <button id="predictBtn" class="btn btn-primary">开始预测</button>
+                        </div>
+
+                        <!-- 预测结果显示区域 -->
+                        <div id="predictionResult" class="mt-3" style="display: none;">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">预测结果</h6>
+                                    <p class="mb-2">风扇速度：<span id="predictedSpeed">--</span></p>
+                                    <p class="mb-2">运行时间：<span id="predictedDuration">--</span> 分钟</p>
+                                    <p class="mb-2">建议：<span id="predictedRecommendation">--</span></p>
+                                    <div class="mt-3">
+                                        <button id="applyPrediction" class="btn btn-success me-2">应用设置</button>
+                                        <button id="cancelPrediction" class="btn btn-secondary">取消</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
