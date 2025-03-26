@@ -3,24 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>ESP32 智能控制</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js"></script>
     <style>
         body {
             background-color: #f5f5f5;
             padding-bottom: 20px;
-            text-size-adjust: 100%;
-            -webkit-text-size-adjust: 100%;
-        }
-        .navbar {
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
         }
         .card {
             margin: 10px 0;
@@ -32,67 +22,15 @@
             font-size: 28px;
             font-weight: bold;
             color: #2196F3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2px;
-        }
-        .status-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 10px;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            z-index: 1000;
         }
         .main-content {
-            margin-top: 60px;
+            margin-top: 20px;
             padding: 15px;
-        }
-        .control-label {
-            font-size: 16px;
-            margin-bottom: 10px;
-            color: #666;
-        }
-        .form-switch .form-check-input {
-            width: 3em;
-            height: 1.5em;
-            margin-left: 0;
-        }
-        .form-check-input:checked {
-            background-color: #2196F3;
-            border-color: #2196F3;
-        }
-        .form-select {
-            height: 45px;
-            font-size: 16px;
-            border-radius: 10px;
         }
         .data-card {
             text-align: center;
             padding: 20px;
             height: 100%;
-        }
-        .data-card .card-title {
-            color: #666;
-            font-size: 18px;
-            margin-bottom: 15px;
-        }
-        .control-card {
-            padding: 20px;
-        }
-        .control-card .card-title {
-            color: #333;
-            font-size: 20px;
-            margin-bottom: 20px;
-        }
-        .status-item {
-            padding: 10px;
-            border-radius: 8px;
-            background-color: #f8f9fa;
-            margin-bottom: 10px;
         }
         .mqtt-status {
             display: inline-flex;
@@ -101,7 +39,6 @@
             border-radius: 12px;
             font-size: 12px;
             margin-left: 15px;
-            transition: all 0.3s ease;
         }
         .mqtt-status::before {
             content: '';
@@ -138,241 +75,127 @@
             50% { opacity: 0.4; }
             100% { opacity: 1; }
         }
-        @media (max-width: 768px) {
-            .sensor-value {
-                font-size: 24px;
-            }
-            .card-title {
-                font-size: 18px;
-            }
-            .control-label {
-                font-size: 14px;
-            }
-        }
-        .unit {
-            font-size: 20px;
-            color: #666;
-        }
-        /* 开关样式优化 */
-        .form-switch {
-            padding-left: 2.5em;
-            margin-bottom: 1rem;
-        }
-        
-        .form-switch .form-check-input {
-            height: 1.5em;
-            width: 3em;
-            margin-left: -2.5em;
-            background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='rgba(0,0,0,0.25)'/></svg>");
-            background-position: left center;
-            border-radius: 2em;
-            transition: all .3s ease-in-out;
-        }
-        
-        .form-switch .form-check-input:checked {
-            background-position: right center;
-            background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='white'/></svg>");
-        }
-        
-        /* 控制卡片样式优化 */
-        .control-card {
-            padding: 1.5rem;
-        }
-        
-        .control-card .card-title {
-            margin-bottom: 1.5rem;
-            color: #333;
-            font-weight: 500;
-        }
-        
-        .control-label {
-            font-size: 1rem;
-            color: #666;
-            margin-bottom: 0.5rem;
-        }
-        
-        /* 滑块样式优化 */
-        .form-range {
-            height: 1.5rem;
-            padding: 0;
-        }
-        
-        .form-range::-webkit-slider-thumb {
-            width: 1.5rem;
-            height: 1.5rem;
-            margin-top: -0.5rem;
-            background-color: #2196F3;
-            border: 0;
-            border-radius: 50%;
-            transition: all .2s ease-in-out;
-        }
-        
-        .form-range::-webkit-slider-thumb:active {
-            transform: scale(1.2);
-        }
-        
-        .form-range::-webkit-slider-runnable-track {
-            height: 0.5rem;
-            background-color: #e9ecef;
-            border-radius: 0.25rem;
-        }
     </style>
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="#">ESP32 智能控制</a>
+    <!-- MQTT状态指示器 -->
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0">ESP32 智能控制</h4>
             <div class="mqtt-status mqtt-disconnected" id="mqttStatus">未连接</div>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="index.html">控制面板</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="analysis.html">数据分析</a>
-                    </li>
-                </ul>
-            </div>
         </div>
-    </nav>
+    </div>
 
     <!-- 主要内容 -->
     <div class="main-content">
         <div class="container">
             <!-- 传感器数据 -->
             <div class="row">
-                <div class="col-4">
+                <div class="col-md-4">
                     <div class="card data-card">
                         <h5 class="card-title">温度</h5>
-                        <div class="sensor-value">
-                            <span id="temperature">--</span>
-                            <span class="unit">°C</span>
-                        </div>
+                        <p class="sensor-value" id="temperature">--°C</p>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-md-4">
                     <div class="card data-card">
                         <h5 class="card-title">湿度</h5>
-                        <div class="sensor-value">
-                            <span id="humidity">--</span>
-                            <span class="unit">%</span>
-                        </div>
+                        <p class="sensor-value" id="humidity">--%</p>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-md-4">
                     <div class="card data-card">
                         <h5 class="card-title">光照</h5>
-                        <div class="sensor-value">
-                            <span id="light">--</span>
-                            <span class="unit">lx</span>
-                        </div>
+                        <p class="sensor-value" id="light">--lx</p>
                     </div>
                 </div>
             </div>
 
             <!-- 控制区域 -->
-            <div class="row">
-                <!-- LED控制 -->
-                <div class="col-12">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">LED控制</h5>
-                            <div class="mb-3">
-                                <label for="ledBrightness" class="form-label">LED亮度 (<span id="ledBrightnessValue">0</span>%)</label>
-                                <input type="range" class="form-range" id="ledBrightness" min="0" max="100" value="0">
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">设备控制</h5>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-center align-items-center gap-5">
+                            <div class="form-check form-switch d-flex align-items-center gap-3">
+                                <input class="form-check-input" type="checkbox" id="fanSwitch" aria-label="风扇开关">
+                                <label class="form-check-label" for="fanSwitch">风扇开关</label>
+                            </div>
+                            <div class="border-start mx-2" style="height: 24px;"></div>
+                            <div class="form-check form-switch d-flex align-items-center gap-3">
+                                <input class="form-check-input" type="checkbox" id="ledSwitch">
+                                <label class="form-check-label" for="ledSwitch">LED开关</label>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- 风扇控制 -->
-                <div class="col-12">
-                    <div class="card control-card">
-                        <h5 class="card-title">风扇控制</h5>
-                        <div class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" id="fanSwitch" role="switch">
-                            <label class="form-check-label control-label" for="fanSwitch">风扇开关</label>
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">风扇速度 (<span id="fanSpeedValue">0</span>%)</label>
+                            <span class="badge bg-info" id="fanDirection">正转</span>
                         </div>
-                        <div class="mt-3">
-                            <label class="control-label" for="fanSpeed">
-                                风扇速度 (<span id="fanSpeedValue">0</span>%)
-                            </label>
-                            <input type="range" class="form-range" id="fanSpeed" min="0" max="100" value="0">
-                        </div>
-                        <div class="mt-3">
-                            <label class="control-label">预测模式</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="predictMode" id="realDataMode" value="real" checked>
-                                <label class="form-check-label" for="realDataMode">
-                                    使用实时数据
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="predictMode" id="manualDataMode" value="manual">
-                                <label class="form-check-label" for="manualDataMode">
-                                    手动输入数据
-                                </label>
-                            </div>
-                        </div>
-                        <div id="manualInputForm" class="mt-3" style="display: none;">
-                            <div class="mb-3">
-                                <label class="control-label" for="manualTemp">温度 (°C)</label>
-                                <input type="number" class="form-control" id="manualTemp" min="0" max="40" step="0.1" value="25">
-                            </div>
-                            <div class="mb-3">
-                                <label class="control-label" for="manualHumidity">湿度 (%)</label>
-                                <input type="number" class="form-control" id="manualHumidity" min="0" max="100" step="0.1" value="60">
-                            </div>
-                            <div class="mb-3">
-                                <label class="control-label" for="manualLight">光照强度 (lx)</label>
-                                <input type="number" class="form-control" id="manualLight" min="0" max="65535" step="1" value="500">
-                            </div>
-                            <div class="mb-3">
-                                <label class="control-label" for="manualHour">时间 (小时)</label>
-                                <input type="number" class="form-control" id="manualHour" min="0" max="23" step="1" value="12">
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <button id="predictBtn" class="btn btn-primary w-100" style="height: 45px; border-radius: 10px;">
-                                开始预测
-                            </button>
-                        </div>
+                        <input type="range" class="form-range" id="fanSpeed" min="0" max="100" value="0">
                     </div>
                 </div>
             </div>
 
-            <!-- 系统状态信息 -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card control-card">
-                        <h5 class="card-title">系统状态</h5>
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="status-item">
-                                    <label class="control-label">CPU温度</label>
-                                    <p class="sensor-value" id="cpuTemp" role="status" aria-live="polite">--°C</p>
-                                </div>
+            <!-- 在控制区域卡片中添加预测控制部分 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">智能预测</h5>
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="predictMode" id="predictNone" value="none" checked>
+                            <label class="form-check-label" for="predictNone">
+                                关闭预测
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="predictMode" id="predictRealtime" value="realtime">
+                            <label class="form-check-label" for="predictRealtime">
+                                实时数据预测
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="predictMode" id="predictManual" value="manual">
+                            <label class="form-check-label" for="predictManual">
+                                手动输入预测
+                            </label>
+                        </div>
+                        
+                        <!-- 手动输入表单 -->
+                        <div id="manualInputForm" class="mt-3" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label" for="manualTemp">温度 (°C)</label>
+                                <input type="number" class="form-control" id="manualTemp" min="0" max="40" step="0.1" value="25">
                             </div>
-                            <div class="col-6">
-                                <div class="status-item">
-                                    <label class="control-label">CPU频率</label>
-                                    <p class="sensor-value" id="cpuFreq" role="status" aria-live="polite">--MHz</p>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="manualHumidity">湿度 (%)</label>
+                                <input type="number" class="form-control" id="manualHumidity" min="0" max="100" step="0.1" value="60">
                             </div>
-                            <div class="col-6">
-                                <div class="status-item">
-                                    <label class="control-label">内存使用</label>
-                                    <p class="sensor-value" id="memoryUsage" role="status" aria-live="polite">--%</p>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="manualLight">光照强度 (lx)</label>
+                                <input type="number" class="form-control" id="manualLight" min="0" max="65535" step="1" value="500">
                             </div>
-                            <div class="col-6">
-                                <div class="status-item">
-                                    <label class="control-label">运行时间</label>
-                                    <p class="sensor-value" id="uptime" role="status" aria-live="polite">--:--:--</p>
+                            <div class="mb-3">
+                                <label class="form-label" for="manualHour">时间 (小时)</label>
+                                <input type="number" class="form-control" id="manualHour" min="0" max="23" step="1" value="12">
+                            </div>
+                            <button id="predictBtn" class="btn btn-primary">开始预测</button>
+                        </div>
+
+                        <!-- 预测结果显示区域 -->
+                        <div id="predictionResult" class="mt-3" style="display: none;">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">预测结果</h6>
+                                    <p class="mb-2">风扇速度：<span id="predictedSpeed">--</span></p>
+                                    <p class="mb-2">运行时间：<span id="predictedDuration">--</span> 分钟</p>
+                                    <p class="mb-2">建议：<span id="predictedRecommendation">--</span></p>
+                                    <div class="mt-3">
+                                        <button id="applyPrediction" class="btn btn-success me-2">应用设置</button>
+                                        <button id="cancelPrediction" class="btn btn-secondary">取消</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -383,6 +206,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html> 
